@@ -22,4 +22,8 @@ public class AccountExportUtil {
   public void doExport(long height, BlockCapsule blockCapsule, long startBlockHeight) {
     exporter.export(height, this.manager.getAccountStore(), blockCapsule, this.manager.getTransactionRetStore(), this.manager.getBlockIndexStore(),startBlockHeight);
   }
+
+  public void doExport0301(long height, BlockCapsule blockCapsule, long startBlockHeight, String token) {
+    exporter.export0301(height, this.manager.getAccountStore(), blockCapsule, this.manager.getTransactionRetStore(), this.manager.getBlockIndexStore(),startBlockHeight, token);
+  }
 }

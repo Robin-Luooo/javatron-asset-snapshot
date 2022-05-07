@@ -16,9 +16,10 @@ import org.tron.core.capsule.BlockCapsule;
 @Aspect
 public class AccountExportAspect {
 
-  public static final AtomicLong EXPORT_NUM = new AtomicLong(0);
-  public static final AtomicLong EXPORT_TIME = new AtomicLong(0);
+  public static final AtomicLong EXPORT_NUM = new AtomicLong(Long.parseLong("38985700"));
+  public static final AtomicLong EXPORT_TIME = new AtomicLong(Long.parseLong("1646064000000"));
   public static final AtomicLong START_BLOCK_HEIGHT = new AtomicLong(0);
+  private BlockCapsule currBlock;
 
   @Autowired
   private AccountExportUtil util;
@@ -28,21 +29,47 @@ public class AccountExportAspect {
 
   }
 
+  public void exportAccount0301(String token) {
+    if (currBlock == null) {
+      System.out.println(" >>> block not reach, try latter");
+      return;
+    }
+    new Thread(new Runnable() {
+      @Override
+      public void run() {
+        try {
+          System.out.println(" >>> manually export data start, block=" + currBlock.getNum());
+          util.doExport0301(currBlock.getNum(), currBlock, START_BLOCK_HEIGHT.get(), token);
+        } catch (Exception ex) {
+          logger.error("manually export account failure: token={}", token, ex);
+        }
+      }
+    }).run();
+  }
+
   @After("pointPushBlock(block)")
   public void exportAccount(BlockCapsule block) {
 
-    if (block.getNum() == EXPORT_NUM.get()
-            || Math.abs(block.getTimeStamp() - EXPORT_TIME.get()) <= 6000) {
-      try {
-        util.doExport(block.getNum(), block, START_BLOCK_HEIGHT.get());
+    if (block.getNum() == EXPORT_NUM.get() || Math.abs(block.getTimeStamp() - EXPORT_TIME.get()) <= 6000) {
+      currBlock = block;
+      while (true) {
+        logger.info("export account block={}, sleeping... now={}", block.getNum(), System.currentTimeMillis());
+        try {
+          Thread.sleep(1200 * 1000);
+        } catch (InterruptedException ex) {
+          break;
+        }
+      }
 
-      } catch (Exception ex) {
-        logger.error("export account failure: {}", ex.getMessage());
-      }
-      finally {
-        EXPORT_NUM.set(0);
-        EXPORT_TIME.set(0);
-      }
+//      try {
+//        util.doExport(block.getNum(), block, START_BLOCK_HEIGHT.get());
+//      } catch (Exception ex) {
+//        logger.error("export account failure: {} {}", ex.getMessage(), ex.getStackTrace());
+//      }
+//      finally {
+//        EXPORT_NUM.set(Long.parseLong("38985700"));
+//        EXPORT_TIME.set(Long.parseLong("1646064000000"));
+//      }
     }
   }
 

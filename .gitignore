@@ -21,3 +21,5 @@ plugins/bin/
 plugins/build/
 protocol/bin/
 protocol/build/
+.idea/
+.DS_Store

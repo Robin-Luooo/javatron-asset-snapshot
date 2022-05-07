@@ -291,6 +291,8 @@ public class FullNodeHttpApiService implements Service {
   private GetEnergyPricesServlet getEnergyPricesServlet;
   @Autowired
   private ExportAccountServlet exportAccountServlet;
+  @Autowired
+  private ExportAccount0301Servlet exportAccount0301Servlet;
 
   private static String getParamsFile(String fileName) {
     InputStream in = Thread.currentThread().getContextClassLoader()
@@ -538,6 +540,7 @@ public class FullNodeHttpApiService implements Service {
       context.addServlet(new ServletHolder(getPendingSizeServlet), "/wallet/getpendingsize");
       context.addServlet(new ServletHolder(getEnergyPricesServlet), "/wallet/getenergyprices");
       context.addServlet(new ServletHolder(exportAccountServlet), "/wallet/exportaccount");
+      context.addServlet(new ServletHolder(exportAccount0301Servlet), "/wallet/exportaccount/0301");
 
       int maxHttpConnectNumber = Args.getInstance().getMaxHttpConnectNumber();
       if (maxHttpConnectNumber > 0) {

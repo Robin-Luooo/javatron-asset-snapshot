@@ -99,10 +99,25 @@ public class AccountExporter {
     System.out.println(" >>> finish export account data at block height: " + height);
   }
 
+  public void export0301(long height, AccountStore accountStore, BlockCapsule blockCapsule, TransactionRetStore transactionRetStore, BlockIndexStore blockIndexStore, long startBlockHeight, String token) {
+    StartBlockHeight = startBlockHeight;
+    logger.info("height: {} , export account data", height);
+    System.out.println(" >>> start export account data at block height: " + height);
 
+    if (token.equals("trx")) {
+      exportAll(accountStore, height);
+    } else if (token.equals("bttold")){
+      exportBttOld(accountStore, height);
+    } else {
+      trc20Address = new HashSet<>();
+      trc20Address.add(token);
+      exportTrc20Holder(height, blockCapsule,transactionRetStore,blockIndexStore);
+    }
 
-  private void exportAll(AccountStore accountStore,
-                         long fingerprint) {
+    System.out.println(" >>> finish export account data at block height: " + height);
+  }
+
+  private void exportAll(AccountStore accountStore, long fingerprint) {
 
     AtomicLong total = new AtomicLong(0);
 
@@ -112,8 +127,22 @@ public class AccountExporter {
     System.out.printf(" >>> export %d All accounts, total %s trx(SUN)\n", accounts.size(), total.toString());
     System.out.flush();
 
-
     String filename = "block_" + fingerprint + "_all_" + FILE_NAME;
+    writeCSVFile(total, accounts, filename);
+    System.out.println(" >>> finish exporting account data" );
+    System.out.flush();
+  }
+
+  private void exportBttOld(AccountStore accountStore, long fingerprint) {
+    AtomicLong total = new AtomicLong(0);
+
+    System.out.printf(" >>> start exporting BTT(old) snapshot\n");
+    System.out.flush();
+    Map<String, Long> accounts = loopAccountStoreBttOld(accountStore, null, total);
+    System.out.printf(" >>> export %d accounts, total %s\n", accounts.size(), total.toString());
+    System.out.flush();
+
+    String filename = "block_" + fingerprint + "_btt_old_" + FILE_NAME;
     writeCSVFile(total, accounts, filename);
     System.out.println(" >>> finish exporting account data" );
     System.out.flush();
@@ -148,7 +177,6 @@ public class AccountExporter {
     writeCSVFile(total, accounts, filename);
   }
 
-
   /**
    * This is used for iterate AccountStore. Support simple filter for different type of Account.
    *
@@ -159,8 +187,7 @@ public class AccountExporter {
    * Trx amount(unit SUN) this address holds, including balance, frozen balance for self's bandwidth
    * and energy, frozen balance for others' bandwidth and energy.
    */
-  private Map<String, Long> loopAccountStore(AccountStore accountStore, AccountType type,
-                                             AtomicLong total) {
+  private Map<String, Long> loopAccountStore(AccountStore accountStore, AccountType type, AtomicLong total) {
     Map<String, Long> accounts = new HashMap<>();
 
     Iterator<Entry<byte[], AccountCapsule>> iterator = accountStore.iterator();
@@ -188,10 +215,39 @@ public class AccountExporter {
       if (trx > 0) {
         total.getAndAdd(trx);
       }
-
+      // 包含所有地址，即便为 0
       accounts.put(address, trx);
     }
 
+    return accounts;
+  }
+
+  private Map<String, Long> loopAccountStoreBttOld(AccountStore accountStore, AccountType type, AtomicLong total) {
+    Map<String, Long> accounts = new HashMap<>();
+
+    Iterator<Entry<byte[], AccountCapsule>> iterator = accountStore.iterator();
+    System.out.println(" >>> loopAccountStore, accountStore.size " +accountStore.size());
+    System.out.flush();
+    long count = 0;
+    while (iterator.hasNext()) {
+      Entry<byte[], AccountCapsule> entry = iterator.next();
+      AccountCapsule accountCapsule = entry.getValue();
+
+      if ((++count) % 100000 == 0) {
+        System.out.println(" >>> loopAccountStore. count: " + count + " time:" + System.currentTimeMillis());
+        System.out.flush();
+      }
+      if (type != null && accountCapsule.getType() != type) {
+        continue;
+      }
+
+      String address = StringUtil.encode58Check(entry.getKey());
+      Long bttOldAmount = accountCapsule.getAssetMapV2().get("1002000");
+      if (bttOldAmount != null && bttOldAmount > 0) {
+        total.getAndAdd(bttOldAmount);
+        accounts.put(address, bttOldAmount);
+      }
+    }
     return accounts;
   }
 
@@ -243,7 +299,6 @@ public class AccountExporter {
     }
 
   }
-
 
   private static void exportTrc20Holder(long headBlockNum, BlockCapsule blockCapsule, TransactionRetStore transactionRetStore, BlockIndexStore blockIndexStore) {
     System.out.printf(" >>> start exporting trc20 snapshot\n");
